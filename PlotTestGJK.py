@@ -18,6 +18,13 @@ xyz = np.array([
     [1,1,1]
     ], dtype=np.float) 
 
+
+# return convex hell, ordered count-clockwise
+def convex_hull(points):
+    res = ConvexHull(points)
+    vertices = points[res.vertices]
+    return vertices
+
 def minkowski_hull(poly_A, poly_B):
     na = poly_A.shape[0]
     nb = poly_B.shape[0]
@@ -30,9 +37,7 @@ def minkowski_hull(poly_A, poly_B):
             points[idx] = poly_A[i] - poly_B[j]
             idx += 1
 
-    res = ConvexHull(points)
-    vertices = points[res.vertices]
-    return vertices
+    return convex_hull(points)
 
 def set_limits(plt, polys):
     min = [np.min(poly, axis = 0) for poly in polys]
@@ -42,6 +47,45 @@ def set_limits(plt, polys):
 
     plt.xlim(min[0], max[0])
     plt.ylim(min[1], max[1])
+
+
+# return True if all points of polly are on the clockwise
+# side of the line from b to a
+def test_line_poly(point_a, point_b, poly):
+
+    delta = point_b - point_a
+    perp = np.array([delta[1], -delta[0]]) # rotate clockwise
+
+    dp = perp.dot(point_a)    
+    assert(perp.dot(point_b) >= dp - 1e-6)
+
+    dists = poly.dot(perp)
+    min = np.min(dists)
+
+    return min >= dp
+
+def test_poly_vs_segments(poly_A, poly_B):
+
+    for i in range(poly_A.shape[0]):
+        inext = (i + 1) % poly_A.shape[0] 
+
+        if test_line_poly(poly_A[i], poly_A[inext], poly_B):
+            return True
+
+    return False
+
+# simple test for convex poly intersection by check each segment a 
+# a seperating axis. Returns true if there is an intersection:
+def simple_2d_intersection_test(poly_A, poly_B):
+
+    # test each segment of poly A to see it can be a separating axis:
+    if test_poly_vs_segments(poly_A, poly_B):
+        return False
+
+    if test_poly_vs_segments(poly_B, poly_A):
+        return False        
+
+    return True
 
 
 def face_test():
@@ -86,15 +130,16 @@ def plot_test_2d():
 
     total = 0
     while True:
-        fig, ax = plt.subplots()
-        ax.set_aspect('equal')
-
-        patches = []
     
-        total = 1
+        total += 1
         np.random.seed(total)
-        poly_A = np.random.rand(3,2)*3 - 1
-        poly_B = np.random.rand(3,2)*3 - 1
+
+
+        num_A = np.random.randint(3, 10)
+        num_B = np.random.randint(3, 10)
+
+        poly_A = convex_hull(np.random.rand(num_A,2)*2 - 1)
+        poly_B = convex_hull(np.random.rand(num_B,2)*2 - 1)
 
         if False:
             poly_A = np.array([
@@ -114,6 +159,23 @@ def plot_test_2d():
 
         print("Test {0}:".format(total))
 
+        print("Poly A")
+        print(poly_A)
+        print("Poly B")
+        print(poly_B)
+
+        s_intersects = simple_2d_intersection_test(poly_A, poly_B)
+        intersects = GJK(poly_A, poly_B)
+        print(intersects)
+
+        if intersects == s_intersects:
+            continue
+            pass
+
+        fig, ax = plt.subplots()
+        ax.set_aspect('equal')
+
+        patches = []
 
         polygon = Polygon(poly_A, True)
         patches.append(polygon)
@@ -122,6 +184,9 @@ def plot_test_2d():
         patches.append(polygon)
 
         hull = minkowski_hull(poly_A, poly_B)
+        print("Hull")
+        print(hull)
+
         polygon = Polygon(hull, True)
         patches.append(polygon)
 
@@ -132,19 +197,10 @@ def plot_test_2d():
 
         ax.add_collection(collections)
 
-        print("Poly A")
-        print(poly_A)
-        print("Poly B")
-        print(poly_B)
-        print("Hull")
-        print(hull)
-
-        intersects = GJK(poly_A, poly_B)
-        print(intersects)
 
         set_limits(plt, [hull, poly_A, poly_B])
 
-        plt.title("{0} - {1}".format(total, intersects))
+        plt.title("{0} - {1}, {2}".format(total, intersects, s_intersects))
 
         plt.show()
 
