@@ -24,7 +24,7 @@ def face_closest_point_test():
 
          
     for i, simp in enumerate(tests):
-        in_face, p = face_closest_point(simp)
+        in_face, p = simplex_closest_point(simp)
         print(simp)
         d = np.linalg.norm(p)
         print(in_face, p, d)

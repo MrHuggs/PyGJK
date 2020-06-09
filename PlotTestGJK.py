@@ -1,5 +1,4 @@
 import numpy as np
-
 import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.patches import Arrow
@@ -10,21 +9,13 @@ import mpl_toolkits.mplot3d as a3
 from scipy.spatial import ConvexHull
 from GJK import *
 
-
-xyz = np.array([
-    [0,0,0],
-    [1,0,0], 
-    [1,1,0],
-    [1,1,1]
-    ], dtype=np.float) 
-
-
 # return convex hell, ordered count-clockwise
 def convex_hull(points):
     res = ConvexHull(points)
     vertices = points[res.vertices]
     return vertices
 
+# return the convex hull of hte Minkowski differnce.
 def minkowski_hull(poly_A, poly_B):
     na = poly_A.shape[0]
     nb = poly_B.shape[0]
@@ -39,7 +30,7 @@ def minkowski_hull(poly_A, poly_B):
 
     return convex_hull(points)
 
-def set_limits(plt, polys):
+def set_plot_limits(plt, polys):
     min = [np.min(poly, axis = 0) for poly in polys]
     max = [np.max(poly, axis = 0) for poly in polys]
     max = np.max(max, axis = 0)
@@ -49,7 +40,7 @@ def set_limits(plt, polys):
     plt.ylim(min[1], max[1])
 
 
-# return True if all points of polly are on the clockwise
+# return True if all points of poly are on the clockwise
 # side of the line from b to a
 def test_line_poly(point_a, point_b, poly):
 
@@ -87,44 +78,57 @@ def simple_2d_intersection_test(poly_A, poly_B):
 
     return True
 
+def seg_point_closest(a, b, p):
 
-def face_test():
-    simplex = np.array(
-            [[0.69228538, 1.1242913 ],
-            [-0.75003475, -1.33943442],
-            [-1.1899593 , -0.70945248]]
-            )
+    delta = b - a
+    p_delta = p - a
 
-    pc, best_simplex = face_closest_point(simplex)
-    contains = contains_origin(simplex)
+    dp = delta.dot(p_delta)
 
+    if dp <= 0:
+        return np.linalg.norm(p_delta)
 
-    fig, ax = plt.subplots()
-    ax.set_aspect('equal')
+    projection_2 = dp * dp / delta.dot(delta)
+    p_delta_2 = p_delta.dot(p_delta)
 
-    patches = []
-    polygon = Polygon(simplex, True)
-    patches.append(polygon)
+    delta_2 = delta.dot(delta)
 
-    circle = Circle([0,0], .01)
-    patches.append(circle)
+    if projection_2 >= delta_2:
+        return np.linalg.norm(p - b)
 
-    collections = PatchCollection(patches, cmap=matplotlib.cm.jet, alpha=0.4)
-
-    colors = 100*np.random.rand(len(patches))
-    collections.set_array(np.array(colors))
-
-    ax.add_collection(collections)
-    set_limits(plt, [simplex])
-
-    plt.show()
-
-    pass
-
-#face_test()
+    d2 = p_delta_2 - projection_2
+    return np.math.sqrt(d2)
 
 
-np.random.seed(2039)
+def poly_point_distance(poly, point):
+
+    d = 1e+20
+    for i in range(poly.shape[0]):
+        inext = (i + 1) % poly.shape[0] 
+
+        dc = seg_point_closest(poly[i], poly[inext], point)
+        if (dc < d):
+            d = dc
+
+    return d
+
+def poly_points_distance(poly_A, poly_B):
+    d = 1e+20
+    for b in poly_B:
+        dc = poly_point_distance(poly_A, b)
+        if dc < d:
+            d = dc
+
+    return d
+
+def poly_poly_distance(poly_A, poly_B):
+    dab = poly_points_distance(poly_A, poly_B)
+    dba = poly_points_distance(poly_B, poly_A)
+
+    if dab < dba:
+        return dab
+    return dba
+
 
 def plot_test_2d():
 
@@ -134,28 +138,11 @@ def plot_test_2d():
         total += 1
         np.random.seed(total)
 
-
         num_A = np.random.randint(3, 10)
         num_B = np.random.randint(3, 10)
 
         poly_A = convex_hull(np.random.rand(num_A,2)*2 - 1)
-        poly_B = convex_hull(np.random.rand(num_B,2)*2 - 1)
-
-        if False:
-            poly_A = np.array([
-                [0,0],
-                [2,1], 
-                [0,2],
-                ]) 
-
-            poly_B = np.array([
-                [3,0],
-                [1,1], 
-                [3,2],
-                ]) 
-            #poly_B -= 1
-            #poly_A += 1
-
+        poly_B = convex_hull(np.random.rand(num_B,2)*2)
 
         print("Test {0}:".format(total))
 
@@ -165,8 +152,15 @@ def plot_test_2d():
         print(poly_B)
 
         s_intersects = simple_2d_intersection_test(poly_A, poly_B)
-        intersects = GJK(poly_A, poly_B)
+        intersects, gdist = GJK(poly_A, poly_B)
         print(intersects)
+
+        if intersects == False:
+            d = poly_poly_distance(poly_A, poly_B)
+            print("Simple distance: {0}".format(d))
+            print("GJK    distance: {0}".format(gdist))
+            assert(np.allclose(d, gdist))
+        
 
         if intersects == s_intersects:
             continue
@@ -198,7 +192,7 @@ def plot_test_2d():
         ax.add_collection(collections)
 
 
-        set_limits(plt, [hull, poly_A, poly_B])
+        set_plot_limits(plt, [hull, poly_A, poly_B])
 
         plt.title("{0} - {1}, {2}".format(total, intersects, s_intersects))
 

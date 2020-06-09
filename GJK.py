@@ -1,11 +1,7 @@
 import numpy as np
 import itertools
 
-def assert_is_array(a):
-    assert(str(type(a)) == "<class 'numpy.ndarray'>")
-
 def support(poly, direction):
-    assert_is_array(poly)
 
     dot_products = poly.dot(direction)
     idx = np.argmax(dot_products)
@@ -15,8 +11,7 @@ def support(poly, direction):
 # find the closest point to the origin spanned by this simplex.
 # return whether or not that point in obained in the simplex. 
 #
-def face_closest_point(simplex, tol = 1e-6):
-    assert_is_array(simplex)
+def simplex_closest_point(simplex, tol = 1e-6):
 
     if simplex.shape[0] == 1:
         return True, simplex[0]
@@ -40,8 +35,7 @@ def face_closest_point(simplex, tol = 1e-6):
     p = x0 + a.dot(d)
     return in_face, p
 
-def closest_point(simplex, tol = 1e-6):
-    assert_is_array(simplex)
+def simplex_check(simplex, tol = 1e-6):
 
     nump_points = len(simplex)
 
@@ -50,7 +44,7 @@ def closest_point(simplex, tol = 1e-6):
     for i in range(1, nump_points + 1):
         for list in itertools.combinations(simplex, i):
             sub_simplex = np.vstack(list)
-            in_face, p = face_closest_point(sub_simplex, tol)
+            in_face, p = simplex_closest_point(sub_simplex, tol)
 
             if in_face:
                 d2 = p.dot(p)
@@ -60,13 +54,11 @@ def closest_point(simplex, tol = 1e-6):
                     best_p = p
                     best_simplex = sub_simplex
 
-
-    assert(not best_p is None)
+    # Since we test 0-d simplices (points), there should alway be a best point:
+    assert(not best_p is None)  
     return best_p, best_simplex
 
 def support_point(direction, poly_A, poly_B):
-    assert_is_array(poly_A)
-    assert_is_array(poly_B)
 
     idx_A = support(poly_A, direction)
     idx_B = support(poly_B, -direction)
@@ -75,13 +67,12 @@ def support_point(direction, poly_A, poly_B):
     return point
 
 
+# Test to convex shapes for intersection. Return true if they intersect
+#
 def GJK(poly_A, poly_B, epsilon = 1e-6):
-    assert_is_array(poly_A)
-    assert_is_array(poly_B)
 
     dimension = poly_A.shape[1]
     initial_dir = np.ones(dimension)
-    initial_dir = np.array([0, -1])
 
     p = support_point(initial_dir, poly_A, poly_B)
     simplex = p.reshape([1, -1])
@@ -92,19 +83,19 @@ def GJK(poly_A, poly_B, epsilon = 1e-6):
         dp = p.dot(p) - next.dot(p)
 
         if dp < epsilon * epsilon:
-            return False
+            return False, np.linalg.norm(p)
 
         simplex = np.vstack([simplex, next])
-        p, new_simplex = closest_point(simplex)
+        p, new_simplex = simplex_check(simplex)
 
         pl2 = p.dot(p)
 
         if pl2 < epsilon * epsilon:
-            return True
+            return True, 0.
 
         simplex = new_simplex
         
-    return True
+    return True, 0.
 
 
 
