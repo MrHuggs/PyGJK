@@ -1,10 +1,10 @@
 ###############################################################################
 # Example of 3D intersection test
 #
-#
 import sys
 import numpy as np
 from GJK import *
+
 
 def make_cube(dim):
     n = np.power(2, dim)
@@ -17,6 +17,7 @@ def make_cube(dim):
 
     return res
 
+
 def make_pyramid(dim):
     t = make_cube(dim - 1)
     n = t.shape[0]
@@ -25,14 +26,13 @@ def make_pyramid(dim):
     t = np.hstack([t, new_col])
 
     new_row = np.zeros(dim)
-    new_row[dim-1] = 1
+    new_row[dim - 1] = 1
 
     res = np.vstack([new_row, t])
     return res
 
 
 def GJK_test(dim):
-
     # 3D pyramid centered on the origin:
     shape_A = make_pyramid(dim)
 
@@ -44,7 +44,6 @@ def GJK_test(dim):
 
     print(shape_B)
 
-
     # Test non-intersection
     print("Should not intersect:")
     print(GJK(shape_A, shape_B))
@@ -53,6 +52,7 @@ def GJK_test(dim):
     shape_B = shape_A - offset * .5
     print("Should intersect:")
     print(GJK(shape_A, shape_B))
+
 
 dim = 3
 if len(sys.argv) > 1:
