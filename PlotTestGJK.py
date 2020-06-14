@@ -1,3 +1,14 @@
+#
+# Test routines and 2d Plotting for GJK implementation
+#
+# For each iteration, it create a random convex 2d shape and does
+# a GJK test. The results are compared with a brute force method.
+# If the results disagree, or plotting is enabled, but shapes are
+# drawn along with the Minkowsi differnce. If the shapes don't 
+# intersect, the closest features are drawn as well.
+#
+
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -129,8 +140,14 @@ def poly_poly_distance(poly_A, poly_B):
         return dab
     return dba
 
+def draw_support(plt, points):
+    x = [p[0] for p in points]
+    y = [p[1] for p in points]
+    plt.plot(x,y)
+    plt.scatter(x, y)
 
-def plot_test_2d():
+
+def test_2d(plot_each_case):
 
     total = 0
     while True:
@@ -152,7 +169,7 @@ def plot_test_2d():
         print(poly_B)
 
         s_intersects = simple_2d_intersection_test(poly_A, poly_B)
-        intersects, gdist = GJK(poly_A, poly_B)
+        intersects, gdist, support_points = GJK(poly_A, poly_B)
         print(intersects)
 
         if intersects == False:
@@ -163,8 +180,8 @@ def plot_test_2d():
         
 
         if intersects == s_intersects:
-            continue
-            pass
+            if plot_each_case == False:
+                continue
 
         fig, ax = plt.subplots()
         ax.set_aspect('equal')
@@ -191,11 +208,22 @@ def plot_test_2d():
 
         ax.add_collection(collections)
 
-
         set_plot_limits(plt, [hull, poly_A, poly_B])
+
+        if support_points is not None:
+            draw_support(plt, [s[0] for s in support_points])
+            draw_support(plt, [s[1] for s in support_points])
+            
 
         plt.title("{0} - {1}, {2}".format(total, intersects, s_intersects))
 
         plt.show()
 
-plot_test_2d()
+
+plot_each_case = True
+
+if len(sys.argv) > 1:
+    if sys.argv[1].lower() == "test":
+        plot_each_case = False
+
+test_2d(plot_each_case)

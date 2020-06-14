@@ -26,9 +26,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="GJKExperiments.py" />
-    <Compile Include="PlotTestClosest.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="PlotTestGJK.py">
       <SubType>Code</SubType>
     </Compile>

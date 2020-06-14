@@ -1,105 +1,63 @@
-
+###############################################################################
+# Example of 3D intersection test
+#
+#
+import sys
 import numpy as np
 from GJK import *
 
+def make_cube(dim):
+    n = np.power(2, dim)
+    res = np.ones([n, dim])
+
+    for i in range(n):
+        for j in range(dim):
+            if i & (1 << j) == 0:
+                res[i, j] = -1
+
+    return res
+
+def make_pyramid(dim):
+    t = make_cube(dim - 1)
+    n = t.shape[0]
+
+    new_col = np.zeros(n).reshape([-1, 1])
+    t = np.hstack([t, new_col])
+
+    new_row = np.zeros(dim)
+    new_row[dim-1] = 1
+
+    res = np.vstack([new_row, t])
+    return res
 
 
-def face_closest_point_test():
-    tests = [ 
-        np.array([[1,0]]),
-        np.array([[0,0.0000000001]]),
-        np.array([[1,0], [0,1]]),
-        np.array([[1,0,0], [0,1,0], [0,1,1]]),
-        np.array([[1,0,0], [0,1,0], [0,0,1]]),
-        np.array([[1,0,0,0], [0,1,0,0], [0,0,1,0],[0,0,0,1]])
-        ]
-    cv = [
-        [True, 1],
-        [True, .0000000001],
-        [True, 0.7071067811865476],
-        [True, 0.7071067811865476],
-        [True, 0.5773502691896257],
-        [True, 0.5],
-        ]
+def GJK_test(dim):
 
-         
-    for i, simp in enumerate(tests):
-        in_face, p = simplex_closest_point(simp)
-        print(simp)
-        d = np.linalg.norm(p)
-        print(in_face, p, d)
-        ref_in_face, ref_d = cv[i]
-        assert(ref_in_face == in_face)
-        if in_face:
-            assert(np.allclose(d, ref_d))
+    # 3D pyramid centered on the origin:
+    shape_A = make_pyramid(dim)
 
-                       
-face_closest_point_test()
+    print(shape_A)
 
-def closest_point_test():
-    tests = [ 
-        np.array([[1,0,0,0], [0,1,0,0], [0,0,1,0],[0,0,0,1]])
-        ]
-    cv = [
-        0.5773502691896257,
-        ]
+    offset = np.zeros(dim)
+    offset[dim - 1] = 1
+    shape_B = shape_A - offset * 2
 
-    for i, simp in enumerate(tests):
-        p = closest_point(simp)
-
-        print(simp)
-        d = np.linalg.norm(p)
-        print(p, d)
-        ref_d = cv[i]
-        assert(np.allclose(d, ref_d))
-
-        pass
-
-                       
-closest_point_test()
+    print(shape_B)
 
 
+    # Test non-intersection
+    print("Should not intersect:")
+    print(GJK(shape_A, shape_B))
 
-def simplex_test():
-    simp2 = np.array([[0,0], [1,0], [1,1]])
+    # Test intersection
+    shape_B = shape_A - offset * .5
+    print("Should intersect:")
+    print(GJK(shape_A, shape_B))
 
-    assert(contains_origin(simp2 + 1) == False)
-    assert(contains_origin(simp2 - .5))
+dim = 3
+if len(sys.argv) > 1:
+    dim = int(sys.argv[1])
 
+print("Testing {0}-dimensional pyramids.".format(dim))
 
-    simp3 = np.array([[0,0,0], [1,0,0], [0,1,0],[0,0,1]])
-    assert(contains_origin(simp2 + 1) == False)
-    ac = simp2 - .5
-    assert(contains_origin(ac))
-    ac[[0,1]] = ac[[1,0]]
-    assert(contains_origin(ac))
-
-simplex_test()
-
-
-def GJK_test():
-
-    poly_A = np.array([
-        [0,0],
-        [1,0], 
-        [1,1],
-        [0,1]
-        ]) 
-
-    poly_A = np.array([
-        [0,0],
-        [2,1], 
-        [0,2],
-        ]) 
-
-    poly_B = np.array([
-        [3,0],
-        [1,1], 
-        [3,2],
-        ]) 
-
-    poly_B = poly_A + .5
-
-
-    print(GJK(poly_A, poly_A + .5))
-    print(GJK(poly_A, poly_A + 2))
+GJK_test(dim)
